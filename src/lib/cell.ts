@@ -93,7 +93,11 @@ class InputCell implements Cell {
             text = value.value.toString();
             this.extraCss = value.css;
         }
-        this.element = createElement(`<div data-ci="${col}">${valueHTML(text)}</div>`);
+
+        const element = document.createElement('div');
+        element.appendChild(valueElement(text));
+        element.setAttribute('data-ci', String(col));
+        this.element = element;
         this.setCss();
     }
 
@@ -119,7 +123,8 @@ class InputCell implements Cell {
             if (this.input) {
                 this.input.blur();
                 remove(this.input);
-                this.element.innerHTML = valueHTML(this.input.value);
+                this.element.innerHTML = '';
+                this.element.appendChild(valueElement(this.input.value));
                 this.input = null;
             }
         }
@@ -151,7 +156,8 @@ class InputCell implements Cell {
             this.input.value = value.toString();
         }
         else {
-            this.element.innerHTML = valueHTML(value);
+            this.element.innerHTML = '';
+            this.element.appendChild(valueElement(value));
         }
     }
 
@@ -191,8 +197,10 @@ class InputCell implements Cell {
     }
 }
 
-function valueHTML(value) {
-    return `<span>${value}</span>`;
+function valueElement(value: string|Number) {
+    const valueSpan = document.createElement('span');
+    valueSpan.appendChild(document.createTextNode(String(value)));
+    return valueSpan;
 }
 
 class SelectCell implements Cell {

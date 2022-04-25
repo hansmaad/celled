@@ -1,6 +1,5 @@
 import { Cell, createCell } from './cell';
 import { CSS_ROW } from './css';
-import { createElement } from './dom';
 import { CellValue, CellValueOptions } from './options';
 
 export class Row {
@@ -8,7 +7,11 @@ export class Row {
     cells: Cell[] = [];
 
     constructor(public index: number) {
-        this.element = createElement(`<div data-ri="${index}" class="${CSS_ROW}"></div>`);
+        const element = document.createElement('div');
+        element.setAttribute('data-ri', String(index));
+        element.className = CSS_ROW;
+        this.element = element;
+
     }
 
     addCells(cells: Array<CellValue | CellValueOptions>, updateValueCallback: (cell: Cell) => unknown) {

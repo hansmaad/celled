@@ -196,7 +196,10 @@
                 text = value.value.toString();
                 this.extraCss = value.css;
             }
-            this.element = createElement("<div data-ci=\"" + col + "\">" + valueHTML(text) + "</div>");
+            var element = document.createElement('div');
+            element.appendChild(valueElement(text));
+            element.setAttribute('data-ci', String(col));
+            this.element = element;
             this.setCss();
         }
         InputCell.prototype.destroy = function () {
@@ -220,7 +223,8 @@
                 if (this.input) {
                     this.input.blur();
                     remove(this.input);
-                    this.element.innerHTML = valueHTML(this.input.value);
+                    this.element.innerHTML = '';
+                    this.element.appendChild(valueElement(this.input.value));
                     this.input = null;
                 }
             }
@@ -249,7 +253,8 @@
                 this.input.value = value.toString();
             }
             else {
-                this.element.innerHTML = valueHTML(value);
+                this.element.innerHTML = '';
+                this.element.appendChild(valueElement(value));
             }
         };
         InputCell.prototype.setCss = function () {
@@ -286,8 +291,10 @@
         };
         return InputCell;
     }());
-    function valueHTML(value) {
-        return "<span>" + value + "</span>";
+    function valueElement(value) {
+        var valueSpan = document.createElement('span');
+        valueSpan.appendChild(document.createTextNode(String(value)));
+        return valueSpan;
     }
     var SelectCell = /** @class */ (function () {
         function SelectCell(row, col, value, callback) {
@@ -375,7 +382,10 @@
         function Row(index) {
             this.index = index;
             this.cells = [];
-            this.element = createElement("<div data-ri=\"" + index + "\" class=\"" + CSS_ROW + "\"></div>");
+            var element = document.createElement('div');
+            element.setAttribute('data-ri', String(index));
+            element.className = CSS_ROW;
+            this.element = element;
         }
         Row.prototype.addCells = function (cells, updateValueCallback) {
             var _this = this;
@@ -436,7 +446,7 @@
                 var visibleNodesCount = Math.ceil(viewportHeight / rowHeight) + 2 * itemPadding;
                 visibleNodesCount = Math.min(itemCount - startIndex, visibleNodesCount);
                 var endIndex = startIndex + visibleNodesCount - 1; // last rendered item (including)
-                var maxOffsetY = totalContentHeight - viewportHeight - itemPadding * rowHeight; // do not go beyond this
+                var maxOffsetY = Math.max(0, totalContentHeight - viewportHeight - itemPadding * rowHeight); // do not go beyond this
                 var offsetY = Math.min(maxOffsetY, startIndex * rowHeight);
                 // At the end of the list we will not rerender in order to avoid jumping scrollbar.
                 var lastItemIndex = itemCount - 1;
@@ -569,7 +579,7 @@
             var cell = row.cells[colIndex];
             if (cell) {
                 cell.set(value);
-                this.updatValue(cell, emit);
+                this.updateValue(cell, emit);
             }
         };
         Grid.prototype.addRows = function (rows) {
@@ -858,7 +868,7 @@
             var onInput = function (e) {
                 var activeCell = _this.activeCell;
                 if (activeCell && !activeCell.readonly && activeCell.takesKey()) {
-                    _this.updatValue(activeCell, true);
+                    _this.updateValue(activeCell, true);
                     _this.cells.forEach(function (cell) {
                         if (cell.selected() && cell !== activeCell) {
                             _this.setCell(cell, activeCell.value());
@@ -957,7 +967,7 @@
         Grid.prototype.setCell = function (cell, value) {
             if (!cell.readonly) {
                 cell.set(value);
-                this.updatValue(cell, true);
+                this.updateValue(cell, true);
             }
         };
         Grid.prototype.unselect = function () {
@@ -968,7 +978,7 @@
             });
             return selectionChanged;
         };
-        Grid.prototype.updatValue = function (cell, emit) {
+        Grid.prototype.updateValue = function (cell, emit) {
             var colIndex = cell.col;
             var rowOption = this.options.rows[cell.row];
             var cellValue = rowOption[colIndex];
