@@ -320,6 +320,7 @@ var SelectCell = /** @class */ (function () {
     }
     SelectCell.prototype.destroy = function () {
         this.selectElement.removeEventListener('change', this.listener);
+        this.listener = null;
     };
     SelectCell.prototype.element = function () {
         return this.elem;
@@ -531,6 +532,7 @@ var Grid = /** @class */ (function () {
     }
     Grid.prototype.init = function (options) {
         var _this = this;
+        this.destroy();
         options.scroll = getScrollOptions(options);
         this.options = options;
         var container = this.container;
@@ -566,16 +568,22 @@ var Grid = /** @class */ (function () {
         this.resetColumnWidths();
     };
     Grid.prototype.destroy = function () {
-        this.render.destroy();
+        if (this.render) {
+            this.render.destroy();
+            this.render = null;
+        }
         this.cleanups.forEach(function (c) { return c(); });
         this.cleanups.length = 0;
-        remove(this.grid);
+        if (this.grid) {
+            remove(this.grid);
+        }
         this.cells.forEach(function (c) { return c.destroy(); });
+        this.cells.length = 0;
+        this.rows.length = 0;
         this.grid = null;
         this.hiddenInput = null;
         this.cellInput = null;
-        this.rows = null;
-        this.cells = null;
+        this.events = new EventEmitter();
     };
     Grid.prototype.on = function (event, handler) {
         this.events.addHandler(event, handler);
@@ -657,7 +665,7 @@ var Grid = /** @class */ (function () {
             off(document, 'mouseup', mouseup);
             _this.resetColumnWidths();
         };
-        on(column, 'mousedown', function (e) {
+        var cleanupMousedown = on(column, 'mousedown', function (e) {
             if (e.target === resizer) {
                 // Resize columns
                 nextColumn = column.nextElementSibling;
@@ -679,6 +687,7 @@ var Grid = /** @class */ (function () {
             on(document, 'mousemove', mousemove);
             e.preventDefault();
         });
+        this.cleanups.push(cleanupMousedown);
         return column;
     };
     Grid.prototype.focusHiddenInput = function () {
@@ -938,13 +947,13 @@ var Grid = /** @class */ (function () {
     };
     Grid.prototype.initClipboard = function () {
         var _this = this;
-        on(this.hiddenInput, 'paste', function (e) {
+        var cleanupPaste = on(this.hiddenInput, 'paste', function (e) {
             // Don't actually paste to hidden input
             e.preventDefault();
             var text = (e.clipboardData || window.clipboardData).getData('text');
             _this.pasteCSV(text, '\t');
         });
-        on(this.hiddenInput, 'copy', function (e) {
+        var cleanupCopy = on(this.hiddenInput, 'copy', function (e) {
             e.preventDefault();
             var activeCell = _this.activeCell;
             if (!activeCell) {
@@ -969,6 +978,8 @@ var Grid = /** @class */ (function () {
             var clipboard = (e.clipboardData || window.clipboardData);
             clipboard.setData('text/plain', writeCSV(csv, '\t'));
         });
+        this.cleanups.push(cleanupPaste);
+        this.cleanups.push(cleanupCopy);
     };
     Grid.prototype.setCell = function (cell, value) {
         if (!cell.readonly) {

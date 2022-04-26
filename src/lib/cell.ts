@@ -242,6 +242,7 @@ class SelectCell implements Cell {
 
     destroy() {
         this.selectElement.removeEventListener('change', this.listener);
+        this.listener = null;
     }
 
     element(): HTMLElement {

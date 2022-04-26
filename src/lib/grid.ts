@@ -42,6 +42,7 @@ export class Grid {
     }
 
     init(options: GridOptions) {
+        this.destroy();
         options.scroll = getScrollOptions(options);
         this.options = options;
         const container = this.container;
@@ -85,17 +86,24 @@ export class Grid {
     }
 
     destroy() {
-        this.render.destroy();
+        if (this.render) {
+            this.render.destroy();
+            this.render = null;
+        }
         this.cleanups.forEach(c => c());
         this.cleanups.length = 0;
-        remove(this.grid);
+        if (this.grid) {
+            remove(this.grid);
+        }
         this.cells.forEach(c => c.destroy());
+        this.cells.length = 0;
+        this.rows.length = 0;
         this.grid = null;
         this.hiddenInput = null;
         this.cellInput = null;
-        this.rows = null;
-        this.cells = null;
+        this.events = new EventEmitter();
     }
+
 
     /**
      * Adds an event listener.
@@ -186,7 +194,7 @@ export class Grid {
             this.resetColumnWidths();
         };
 
-        on(column, 'mousedown', (e: MouseEvent) => {
+        const cleanupMousedown = on(column, 'mousedown', (e: MouseEvent) => {
             if (e.target === resizer) {
                 // Resize columns
                 nextColumn = column.nextElementSibling;
@@ -208,7 +216,7 @@ export class Grid {
             on(document, 'mousemove', mousemove);
             e.preventDefault();
         });
-
+        this.cleanups.push(cleanupMousedown);
         return column;
     }
 
@@ -482,14 +490,14 @@ export class Grid {
     }
 
     private initClipboard() {
-        on(this.hiddenInput, 'paste', (e: ClipboardEvent) => {
+        const cleanupPaste = on(this.hiddenInput, 'paste', (e: ClipboardEvent) => {
             // Don't actually paste to hidden input
             e.preventDefault();
             const text = (e.clipboardData || (window as any).clipboardData).getData('text');
             this.pasteCSV(text, '\t');
         });
 
-        on(this.hiddenInput, 'copy', (e: ClipboardEvent) => {
+        const cleanupCopy = on(this.hiddenInput, 'copy', (e: ClipboardEvent) => {
             e.preventDefault();
             const activeCell = this.activeCell;
             if (!activeCell) {
@@ -515,6 +523,8 @@ export class Grid {
             const clipboard = (e.clipboardData || (window as any).clipboardData);
             clipboard.setData('text/plain', writeCSV(csv, '\t'));
         });
+        this.cleanups.push(cleanupPaste);
+        this.cleanups.push(cleanupCopy);
     }
 
     private setCell(cell: Cell, value: string) {
