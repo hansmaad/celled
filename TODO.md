@@ -1,3 +1,2 @@
  - shrink fit cells?
  - remove input field when resizing columns... why?
- - test if creating DOM elements in render is faster

@@ -5,10 +5,12 @@ import { CellUpdateOptions, CellValue, CellValueOptions } from './options';
 export type UpdateCallback = (cell: Cell) => unknown;
 
 export interface Cell {
-    readonly element: HTMLElement;
+
     readonly readonly: boolean;
     row: number;
     col: number;
+
+    element(): HTMLElement;
 
     /**
      * Cleanup any resources, listeners...
@@ -75,33 +77,39 @@ export function createCell(row: number, col: number, value: CellValue | CellValu
 
 
 class InputCell implements Cell {
-    element: HTMLElement;
+
     input: HTMLInputElement;  // If the cell is active, this is the assigned input element
     readonly = false;
 
     private isActive = false;
     private isSelected = false;
     private extraCss = '';
+    private val: string;
+    private elem: HTMLElement;
 
     constructor(public row: number, public col: number, value: CellValue | CellValueOptions) {
-        let text: string;
         if (isPlainValue(value)) {
-            text = value.toString();
+            this.val = String(value);
         }
         else {
             this.readonly = value.readonly;
-            text = value.value.toString();
+            this.val = String(value.value);
             this.extraCss = value.css;
         }
-
-        const element = document.createElement('div');
-        element.appendChild(valueElement(text));
-        element.setAttribute('data-ci', String(col));
-        this.element = element;
-        this.setCss();
     }
 
     destroy() {
+    }
+
+    element(): HTMLElement {
+        if (!this.elem) {
+            const element = document.createElement('div');
+            element.appendChild(valueElement(this.val));
+            element.setAttribute('data-ci', String(this.col));
+            this.elem = element;
+            this.setCss();
+        }
+        return this.elem;
     }
 
     selected() {
@@ -123,8 +131,8 @@ class InputCell implements Cell {
             if (this.input) {
                 this.input.blur();
                 remove(this.input);
-                this.element.innerHTML = '';
-                this.element.appendChild(valueElement(this.input.value));
+                this.elem.innerHTML = '';
+                this.elem.appendChild(valueElement(this.input.value));
                 this.input = null;
             }
         }
@@ -133,7 +141,7 @@ class InputCell implements Cell {
     }
 
     value() {
-        return this.input ? this.input.value : this.element.textContent;
+        return this.input ? this.input.value : this.val;
     }
 
     set(value: CellValue | CellUpdateOptions) {
@@ -152,12 +160,13 @@ class InputCell implements Cell {
     }
 
     private setValue(value: CellValue) {
+        this.val = String(value);
         if (this.input) {
             this.input.value = value.toString();
         }
-        else {
-            this.element.innerHTML = '';
-            this.element.appendChild(valueElement(value));
+        else if (this.elem) {
+            this.elem.innerHTML = '';
+            this.elem.appendChild(valueElement(value));
         }
     }
 
@@ -168,14 +177,16 @@ class InputCell implements Cell {
             cssIf(this.isSelected, CSS_SELECTED) +
             cssIf(!!this.input, CSS_EDITING) +
             cssIf(!!this.extraCss, this.extraCss);
-        this.element.className = className;
+        if (this.elem) {
+            this.elem.className = className;
+        }
     }
 
     startEdit(input: HTMLInputElement, select = false) {
         if (this.readonly) {
             return;
         }
-        const element = this.element;
+        const element = this.elem;
         this.input = input;
         input.value = element.textContent;
         if (select) {
@@ -204,24 +215,25 @@ function valueElement(value: string|Number) {
 }
 
 class SelectCell implements Cell {
-    element: HTMLElement;
+
     selectElement: HTMLSelectElement;
     readonly = false;
     options: ReadonlyArray<CellValue> = null;
-    listener;
 
+    private listener;
     private isSelected = false;
     private extraCss = '';
+    private elem: HTMLElement;
 
     constructor(public row: number, public col: number, value: CellValueOptions, callback: UpdateCallback) {
 
         this.readonly = value.readonly;
         this.options = value.options;
-        this.element = createElement(`<div data-ci="${col}"></div>`);
+        this.elem = createElement(`<div data-ci="${col}"></div>`);
         this.selectElement = createElement<HTMLSelectElement>(`<select><select>`);
         setOptions(this.selectElement, this.options);
         this.set('' + value.value);
-        this.element.appendChild(this.selectElement);
+        this.elem.appendChild(this.selectElement);
         this.listener = () => callback(this);
         this.selectElement.addEventListener('change', this.listener);
         this.extraCss = value.css;
@@ -230,6 +242,10 @@ class SelectCell implements Cell {
 
     destroy() {
         this.selectElement.removeEventListener('change', this.listener);
+    }
+
+    element(): HTMLElement {
+        return this.elem;
     }
 
     value(): string {
@@ -259,7 +275,7 @@ class SelectCell implements Cell {
             cssIf(this.readonly, CSS_READONLY) +
             cssIf(this.isSelected, CSS_SELECTED) +
             cssIf(!!this.extraCss, this.extraCss);
-        this.element.className = className;
+        this.elem.className = className;
     }
 
     select(doSelect = true) {

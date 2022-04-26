@@ -2,23 +2,33 @@ import { Cell, createCell } from './cell';
 import { CSS_ROW } from './css';
 import { CellValue, CellValueOptions } from './options';
 
+
+export interface RowArgs {
+    index: number;
+    cells: Array<CellValue | CellValueOptions>;
+    updateValueCallback: (cell: Cell) => unknown;
+}
+
 export class Row {
-    element: HTMLElement;
+
     cells: Cell[] = [];
+    index: number;
 
-    constructor(public index: number) {
-        const element = document.createElement('div');
-        element.setAttribute('data-ri', String(index));
-        element.className = CSS_ROW;
-        this.element = element;
+    private elem: HTMLElement;
 
+    constructor(args: RowArgs) {
+        this.index = args.index;
+        this.cells = args.cells.map((cell, columnIndex) => createCell(this.index, columnIndex, cell, args.updateValueCallback));
     }
 
-    addCells(cells: Array<CellValue | CellValueOptions>, updateValueCallback: (cell: Cell) => unknown) {
-        cells.forEach((c, columnIndex) => {
-            const cell = createCell(this.index, columnIndex, c, updateValueCallback);
-            this.cells.push(cell);
-            this.element.appendChild(cell.element);
-        });
+    element() {
+        if (!this.elem) {
+            const element = document.createElement('div');
+            element.setAttribute('data-ri', String(this.index));
+            element.className = CSS_ROW;
+            this.elem = element;
+            this.cells.forEach(cell => this.elem.appendChild(cell.element()));
+        }
+        return this.elem;
     }
 }

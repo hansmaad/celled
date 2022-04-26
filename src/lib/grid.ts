@@ -219,14 +219,13 @@ export class Grid {
     }
 
     private createAndAddRow(r: RowOptions): Row {
-        const row = new Row(this.rows.length);
-        row.addCells(r, this.updateValueCallback());
+        const row = new Row({
+            index: this.rows.length,
+            cells: r,
+            updateValueCallback: cell => this.emitInput(cell)
+        });
         this.rows.push(row);
         return row;
-    }
-
-    private updateValueCallback() {
-        return cell => this.emitInput(cell);
     }
 
     private createRows() {

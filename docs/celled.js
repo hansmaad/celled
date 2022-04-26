@@ -187,22 +187,26 @@
             this.isActive = false;
             this.isSelected = false;
             this.extraCss = '';
-            var text;
             if (isPlainValue(value)) {
-                text = value.toString();
+                this.val = String(value);
             }
             else {
                 this.readonly = value.readonly;
-                text = value.value.toString();
+                this.val = String(value.value);
                 this.extraCss = value.css;
             }
-            var element = document.createElement('div');
-            element.appendChild(valueElement(text));
-            element.setAttribute('data-ci', String(col));
-            this.element = element;
-            this.setCss();
         }
         InputCell.prototype.destroy = function () {
+        };
+        InputCell.prototype.element = function () {
+            if (!this.elem) {
+                var element = document.createElement('div');
+                element.appendChild(valueElement(this.val));
+                element.setAttribute('data-ci', String(this.col));
+                this.elem = element;
+                this.setCss();
+            }
+            return this.elem;
         };
         InputCell.prototype.selected = function () {
             return this.isSelected;
@@ -223,8 +227,8 @@
                 if (this.input) {
                     this.input.blur();
                     remove(this.input);
-                    this.element.innerHTML = '';
-                    this.element.appendChild(valueElement(this.input.value));
+                    this.elem.innerHTML = '';
+                    this.elem.appendChild(valueElement(this.input.value));
                     this.input = null;
                 }
             }
@@ -232,7 +236,7 @@
             return this;
         };
         InputCell.prototype.value = function () {
-            return this.input ? this.input.value : this.element.textContent;
+            return this.input ? this.input.value : this.val;
         };
         InputCell.prototype.set = function (value) {
             if (isPlainValue(value)) {
@@ -249,12 +253,13 @@
             }
         };
         InputCell.prototype.setValue = function (value) {
+            this.val = String(value);
             if (this.input) {
                 this.input.value = value.toString();
             }
-            else {
-                this.element.innerHTML = '';
-                this.element.appendChild(valueElement(value));
+            else if (this.elem) {
+                this.elem.innerHTML = '';
+                this.elem.appendChild(valueElement(value));
             }
         };
         InputCell.prototype.setCss = function () {
@@ -264,14 +269,16 @@
                 cssIf(this.isSelected, CSS_SELECTED) +
                 cssIf(!!this.input, CSS_EDITING) +
                 cssIf(!!this.extraCss, this.extraCss);
-            this.element.className = className;
+            if (this.elem) {
+                this.elem.className = className;
+            }
         };
         InputCell.prototype.startEdit = function (input, select) {
             if (select === void 0) { select = false; }
             if (this.readonly) {
                 return;
             }
-            var element = this.element;
+            var element = this.elem;
             this.input = input;
             input.value = element.textContent;
             if (select) {
@@ -307,11 +314,11 @@
             this.extraCss = '';
             this.readonly = value.readonly;
             this.options = value.options;
-            this.element = createElement("<div data-ci=\"" + col + "\"></div>");
+            this.elem = createElement("<div data-ci=\"" + col + "\"></div>");
             this.selectElement = createElement("<select><select>");
             setOptions(this.selectElement, this.options);
             this.set('' + value.value);
-            this.element.appendChild(this.selectElement);
+            this.elem.appendChild(this.selectElement);
             this.listener = function () { return callback(_this); };
             this.selectElement.addEventListener('change', this.listener);
             this.extraCss = value.css;
@@ -319,6 +326,9 @@
         }
         SelectCell.prototype.destroy = function () {
             this.selectElement.removeEventListener('change', this.listener);
+        };
+        SelectCell.prototype.element = function () {
+            return this.elem;
         };
         SelectCell.prototype.value = function () {
             return this.selectElement.value;
@@ -344,7 +354,7 @@
                 cssIf(this.readonly, CSS_READONLY) +
                 cssIf(this.isSelected, CSS_SELECTED) +
                 cssIf(!!this.extraCss, this.extraCss);
-            this.element.className = className;
+            this.elem.className = className;
         };
         SelectCell.prototype.select = function (doSelect) {
             if (doSelect === void 0) { doSelect = true; }
@@ -379,21 +389,22 @@
     }
 
     var Row = /** @class */ (function () {
-        function Row(index) {
-            this.index = index;
-            this.cells = [];
-            var element = document.createElement('div');
-            element.setAttribute('data-ri', String(index));
-            element.className = CSS_ROW;
-            this.element = element;
-        }
-        Row.prototype.addCells = function (cells, updateValueCallback) {
+        function Row(args) {
             var _this = this;
-            cells.forEach(function (c, columnIndex) {
-                var cell = createCell(_this.index, columnIndex, c, updateValueCallback);
-                _this.cells.push(cell);
-                _this.element.appendChild(cell.element);
-            });
+            this.cells = [];
+            this.index = args.index;
+            this.cells = args.cells.map(function (cell, columnIndex) { return createCell(_this.index, columnIndex, cell, args.updateValueCallback); });
+        }
+        Row.prototype.element = function () {
+            var _this = this;
+            if (!this.elem) {
+                var element = document.createElement('div');
+                element.setAttribute('data-ri', String(this.index));
+                element.className = CSS_ROW;
+                this.elem = element;
+                this.cells.forEach(function (cell) { return _this.elem.appendChild(cell.element()); });
+            }
+            return this.elem;
         };
         return Row;
     }());
@@ -407,7 +418,7 @@
             grid.innerHTML = '';
             grid.appendChild(head);
             rows.forEach(function (r) {
-                grid.appendChild(r.element);
+                grid.appendChild(r.element());
             });
         };
         DefaultRenderer.prototype.destroy = function () {
@@ -473,15 +484,16 @@
                     var i = startIndex;
                     for (; i <= endIndex && i < rows.length; ++i) {
                         var row = rows[i];
-                        fragment.appendChild(row.element);
+                        fragment.appendChild(row.element());
                     }
                     grid.appendChild(fragment);
                     renderedHeight = grid.offsetHeight - headerHeight;
                     // Add items until we reached the desired height
                     for (; renderedHeight < desiredRenderHeight && i < rows.length; ++i) {
                         var row = rows[i];
-                        grid.appendChild(row.element);
-                        renderedHeight += row.element.offsetHeight;
+                        var rowElement = row.element();
+                        grid.appendChild(rowElement);
+                        renderedHeight += rowElement.offsetHeight;
                     }
                     var numberOfRenderedItems = i - startIndex;
                     if (numberOfRenderedItems) {
@@ -681,14 +693,14 @@
             this.hiddenInput.focus({ preventScroll: true });
         };
         Grid.prototype.createAndAddRow = function (r) {
-            var row = new Row(this.rows.length);
-            row.addCells(r, this.updateValueCallback());
+            var _this = this;
+            var row = new Row({
+                index: this.rows.length,
+                cells: r,
+                updateValueCallback: function (cell) { return _this.emitInput(cell); }
+            });
             this.rows.push(row);
             return row;
-        };
-        Grid.prototype.updateValueCallback = function () {
-            var _this = this;
-            return function (cell) { return _this.emitInput(cell); };
         };
         Grid.prototype.createRows = function () {
             var _this = this;

@@ -22,7 +22,7 @@ export class DefaultRenderer implements Renderer {
         grid.innerHTML = '';
         grid.appendChild(head);
         rows.forEach(r => {
-            grid.appendChild(r.element);
+            grid.appendChild(r.element());
         });
     }
 
@@ -102,7 +102,7 @@ export class VirtualRenderer implements Renderer {
                 let i = startIndex;
                 for (; i <= endIndex && i < rows.length; ++i) {
                     const row = rows[i];
-                    fragment.appendChild(row.element);
+                    fragment.appendChild(row.element());
                 }
                 grid.appendChild(fragment);
                 renderedHeight = grid.offsetHeight - headerHeight;
@@ -110,8 +110,9 @@ export class VirtualRenderer implements Renderer {
                 // Add items until we reached the desired height
                 for (; renderedHeight < desiredRenderHeight && i < rows.length; ++i) {
                     const row = rows[i];
-                    grid.appendChild(row.element);
-                    renderedHeight += row.element.offsetHeight;
+                    const rowElement = row.element();
+                    grid.appendChild(rowElement);
+                    renderedHeight += rowElement.offsetHeight;
                 }
 
                 const numberOfRenderedItems = i - startIndex;
