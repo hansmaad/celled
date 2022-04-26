@@ -248,7 +248,10 @@ export class Grid {
     }
 
     private flattenCells() {
-        this.cells = this.rows.reduce((a, b) => a.concat(b.cells), [] as Cell[]);
+        this.cells = [];
+        for (let i = 0, end = this.rows.length; i < end; ++i) {
+            this.cells.push(...this.rows[i].cells);
+        }
     }
 
     private initMouse() {

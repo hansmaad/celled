@@ -716,7 +716,11 @@ var Grid = /** @class */ (function () {
         this.render.rerender(this.rows);
     };
     Grid.prototype.flattenCells = function () {
-        this.cells = this.rows.reduce(function (a, b) { return a.concat(b.cells); }, []);
+        var _a;
+        this.cells = [];
+        for (var i = 0, end = this.rows.length; i < end; ++i) {
+            (_a = this.cells).push.apply(_a, this.rows[i].cells);
+        }
     };
     Grid.prototype.initMouse = function () {
         var _this = this;
