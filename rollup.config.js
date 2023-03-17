@@ -10,8 +10,9 @@ import copy from 'rollup-plugin-copy';
 export default {
     input: 'src/celled.ts',
     output: [
-        { file: 'dist/celled.min.js', format: 'umd', name: 'CellEd', sourcemap: true },
-        { file: 'dist/celled.es6.js', format: 'es', sourcemap: true },
+        { file: 'dist/celled.js', format: 'umd', name: 'CellEd', sourcemap: true },
+        { file: 'dist/celled.min.js', format: 'umd', name: 'CellEd', sourcemap: true, plugins: [terser()] },
+        { file: 'dist/celled.es6.js', format: 'es', sourcemap: true, plugins: [terser()] },
     ],
     external: [
 
@@ -24,7 +25,6 @@ export default {
         commonjs(),
         typescript(),
         scss({ fileName: 'celled.css' }),
-        terser(),
         sourceMaps(),
         copy({
             targets: [
