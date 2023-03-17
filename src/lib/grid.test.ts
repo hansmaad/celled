@@ -8,7 +8,7 @@ function queryAll<T extends Element>(elementOrCss: ParentNode|string, cssOrEmpty
     let element: ParentNode = document;
     let css = elementOrCss as string;
     if (typeof elementOrCss !== 'string') {
-        css = cssOrEmpty;
+        css = cssOrEmpty || '';
         element = elementOrCss;
     }
     return [].slice.apply(element.querySelectorAll(css));
@@ -16,14 +16,14 @@ function queryAll<T extends Element>(elementOrCss: ParentNode|string, cssOrEmpty
 
 function getGrid() {
     const grid = document.querySelector('.ced-grid');
-    const headRow = grid.querySelector('.ced-head');
-    const headCells = queryAll(headRow, '.ced-cell');
-    const rows = queryAll(grid, '.ced-row').slice(1);
+    const headRow = grid?.querySelector('.ced-head');
+    const headCells = headRow ? queryAll(headRow, '.ced-cell') : [];
+    const rows = grid ? queryAll(grid, '.ced-row').slice(1) : [];
 
     return {
         head: {
             elements: headCells,
-            values: headCells.map(c => c.textContent.trim()),
+            values: headCells.map(c => c.textContent?.trim() || ''),
         },
         rows: rows.map(r => ({
             row: r,
@@ -49,7 +49,7 @@ function getGrid() {
             selectOption(cellIndex: number, option: any) {
                 const cell = this.cells[cellIndex];
                 const select = query<HTMLSelectElement>(cell.element, 'select');
-                userEvent.selectOptions(select, option);
+                return userEvent.selectOptions(select, option);
             }
         })),
     };
@@ -163,13 +163,13 @@ describe('Grid', () => {
             cols: ['a', 'b'],
             rows: [ [1, 2], [3, 4] ],
         });
-        let selection: SelectArgs;
+        let selection: SelectArgs|undefined;
         g.on('select', args => selection = args);
 
         clickCell(0, 0);
-        expect(selection.selection).toEqual([{ row: 0, col: 0}]);
+        expect(selection?.selection).toEqual([{ row: 0, col: 0}]);
         clickCell(1, 1);
-        expect(selection.selection).toEqual([{ row: 1, col: 1}]);
+        expect(selection?.selection).toEqual([{ row: 1, col: 1}]);
     });
 
     it('should unselect when clicked away', () => {
@@ -190,13 +190,13 @@ describe('Grid', () => {
             rows: [ [1, 2], [3, 4] ],
         });
         const grid = getGrid();
-        let selection: SelectArgs;
+        let selection: SelectArgs|undefined;
         g.on('select', args => selection = args);
 
         clickCell(0, 0);
         fireEvent(document.body, new MouseEvent('mousedown', { bubbles: true }));
         fireEvent(document.body, new MouseEvent('mouseup', { bubbles: true }));
-        expect(selection.selection).toEqual([]);
+        expect(selection?.selection).toEqual([]);
     });
 
     it('should select cells by dragging', () => {
@@ -229,7 +229,7 @@ describe('Grid', () => {
         });
 
         const grid = getGrid();
-        let selection: SelectArgs;
+        let selection: SelectArgs|undefined;
         g.on('select', args => selection = args);
 
         const cell00 = grid.rows[0].cells[0].element;
@@ -310,13 +310,13 @@ describe('Grid', () => {
             cols: ['a', 'b'],
             rows: [ [1, 2], [3, 4] ],
         });
-        let selection: SelectArgs;
+        let selection: SelectArgs|undefined;
         g.on('select', args => selection = args);
 
         clickColumnHead(1);
-        expect(selection.selection).toEqual([{ row: 0, col: 1}, { row: 1, col: 1}]);
+        expect(selection?.selection).toEqual([{ row: 0, col: 1}, { row: 1, col: 1}]);
         clickColumnHead(0);
-        expect(selection.selection).toEqual([{ row: 0, col: 0}, { row: 1, col: 0}]);
+        expect(selection?.selection).toEqual([{ row: 0, col: 0}, { row: 1, col: 0}]);
     });
 
     it('should select whole columns by dragging from right to left', () => {
@@ -338,7 +338,7 @@ describe('Grid', () => {
             rows: [ [1, 2, 3], [4, 5, 6] ],
         });
         const grid = getGrid();
-        let selection: SelectArgs;
+        let selection: SelectArgs|undefined;
         g.on('select', args => selection = args);
 
         fireEvent(grid.head.elements[2], new MouseEvent('mousedown', { bubbles: true }));
@@ -354,8 +354,8 @@ describe('Grid', () => {
             { row: 1, col: 0 }, { row: 1, col: 1 }, { row: 1, col: 2 }]);
     });
 
-    const sortSelectArgs = (args: SelectArgs) => {
-        return args.selection.sort((a, b) => {
+    const sortSelectArgs = (args: SelectArgs|undefined) => {
+        return args?.selection.sort((a, b) => {
             return a.row - b.row || a.col - b.col;
         });
     };
@@ -423,7 +423,7 @@ describe('Grid', () => {
         expect(fired[1].value).toBe('');
     });
 
-    it('should fire input event on select option', () => {
+    it('should fire input event on select option', async () => {
         const g = createGrid({
             cols: ['a', 'b'],
             rows: [
@@ -434,7 +434,7 @@ describe('Grid', () => {
         const grid = getGrid();
         const fired: InputArgs[] = [];
         g.on('input', args => fired.push(args));
-        grid.rows[0].selectOption(1, '3');
+        await grid.rows[0].selectOption(1, '3');
         expect(fired.length).toBe(1);
         expect(fired[0].grid).toBe(g);
         expect(fired[0].row).toBe(0);
@@ -806,15 +806,19 @@ describe('Grid', () => {
     }
 
     function keyDown(key: string, keyCode: number) {
-        fireEvent.keyDown(document.activeElement, { key, keyCode });
+        if (document.activeElement) {
+            fireEvent.keyDown(document.activeElement, { key, keyCode });
+        }
     }
 
     function keyPress(key: string, keyCode: number) {
-        fireEvent.keyPress(document.activeElement, { key, keyCode });
+        if (document.activeElement) {
+            fireEvent.keyPress(document.activeElement, { key, keyCode });
+        }
     }
 
     function setValue(value: string) {
-        if (document.activeElement.tagName.toLowerCase() === 'input') {
+        if (document.activeElement?.tagName.toLowerCase() === 'input') {
             fireEvent.input(document.activeElement, { target: { value } });
             fireEvent.change(document.activeElement, { target: { value } });
         }
