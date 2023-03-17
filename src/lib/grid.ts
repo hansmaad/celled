@@ -1,7 +1,7 @@
 import { EventEmitter, EventHandler, EventHandlerBase } from './events';
 import { parseCSV, writeCSV } from './csv';
 import { query, remove, createElement, queryAll, off, on } from './dom';
-import { CellUpdateOptions, CellValue, CellValueOptions, GridOptions, RowOptions, ScrollOptions } from './options';
+import { CellUpdateOptions, CellValue, ColOptions, GridOptions, RowOptions, ScrollOptions } from './options';
 import { Cell } from './cell';
 import { CSS_CELL, CSS_CONTAINER, CSS_CONTAINER_SCROLL, CSS_GRID, CSS_HEAD, CSS_HEAD_STICKY, CSS_RESIZER, CSS_ROW } from './css';
 import { Row } from './row';
@@ -141,12 +141,22 @@ export class Grid {
 
     private resetColumnWidths() {
         const allCells = queryAll(this.container, `${css(CSS_HEAD)} ${css(CSS_CELL)}`);
+
         allCells.forEach((c: HTMLElement, i) => {
-            c.style.width = c.offsetWidth + 'px';
+            const colOptions = this.options.cols[i];
+            if (!c.style.width && typeof colOptions === 'object' && colOptions.width) {
+                const widthOption = colOptions.width;
+                const width = typeof widthOption === 'string' ? widthOption : `${widthOption}px`;
+                c.style.width = width;
+            }
+            else {
+                c.style.width = c.offsetWidth + 'px';
+            }
         });
     }
 
-    private createHeadCell(text: string | number, columnIndex: number) {
+    private createHeadCell(colOptions: ColOptions, columnIndex: number) {
+        const text = typeof colOptions === 'object' ? colOptions.name : colOptions;
         const column = createElement(`<div class="${CSS_CELL}" data-ci="${columnIndex}"><span>${text}</span></div>`);
         const resizer = createElement(`<div class="${CSS_RESIZER}"></div>`);
         column.appendChild(resizer);
