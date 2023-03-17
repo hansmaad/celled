@@ -11,7 +11,7 @@ export default {
     input: 'src/celled.ts',
     output: [
         { file: 'dist/celled.min.js', format: 'umd', name: 'CellEd', sourcemap: true },
-        { file: 'dist/celled.es5.js', format: 'es', sourcemap: true },
+        { file: 'dist/celled.es6.js', format: 'es', sourcemap: true },
     ],
     external: [
 

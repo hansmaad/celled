@@ -5,7 +5,7 @@ import { CellValue, CellValueOptions } from './options';
 
 export interface RowArgs {
     index: number;
-    cells: Array<CellValue | CellValueOptions>;
+    cells: (CellValue | CellValueOptions)[];
     updateValueCallback: (cell: Cell) => unknown;
 }
 

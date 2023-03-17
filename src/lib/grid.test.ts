@@ -17,7 +17,7 @@ function queryAll<T extends Element>(elementOrCss: ParentNode|string, cssOrEmpty
 function getGrid() {
     const grid = document.querySelector('.ced-grid');
     const headRow = grid?.querySelector('.ced-head');
-    const headCells = headRow ? queryAll(headRow, '.ced-cell') : [];
+    const headCells = headRow ? queryAll<HTMLDivElement>(headRow, '.ced-cell') : [];
     const rows = grid ? queryAll(grid, '.ced-row').slice(1) : [];
 
     return {
@@ -80,6 +80,26 @@ describe('Grid', () => {
         });
         expect(grid.head.values).toEqual(['a', 'b']);
         expect(grid.rows).toEqual([]);
+    });
+
+    it('should set default widths', () => {
+        const grid = create({
+            cols: ['a', 'b', 'c'],
+            rows: [],
+        });
+        const widths = [...new Set(grid.head.elements.map(e => e.style.width))];
+        expect(widths.length).toEqual(1);
+        expect(widths[0]).toContain('px');
+    });
+
+    it('should create headers with initial width', () => {
+        const grid = create({
+            cols: [{ name: 'a', width: '100px'}, { name: 'b' }],
+            rows: [],
+        });
+        const widths = grid.head.elements.map(e => e.style.width);
+        expect(widths[0]).toEqual('100px');
+        expect(widths[1]).toContain('px');
     });
 
     it('should create rows from strings', () => {
