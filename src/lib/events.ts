@@ -1,11 +1,9 @@
 
-export interface EventArgs { }
+export type EventArgs = { };
 
 export type EventHandlerBase = (arg: EventArgs) => any;
 
-export interface EventHandler<T> extends EventHandlerBase {
-    (arg: T): any;
-}
+export type EventHandler<T> = (arg: T) => any;
 
 export class EventEmitter {
     handlers: { [event: string]: EventHandlerBase[] } = {};

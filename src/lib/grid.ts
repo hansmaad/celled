@@ -112,7 +112,7 @@ export class Grid {
      */
     on(event: 'input' | 'focus', handler: EventHandler<InputArgs>);
     on(event: 'select', handler: EventHandler<SelectArgs>);
-    on(event: string, handler: EventHandlerBase) {
+    on<T>(event: string, handler: EventHandler<T>) {
         this.events.addHandler(event, handler);
     }
 
@@ -602,7 +602,7 @@ export class Grid {
 }
 
 
-function css(className) {
+function css(className: string) {
     return '.' + className;
 }
 
@@ -621,5 +621,3 @@ function getScrollOptions(options: GridOptions): ScrollOptions {
         stickyHeader: trueOr(scroll.stickyHeader),
     };
 }
-
-// ----

@@ -1039,7 +1039,6 @@
             stickyHeader: trueOr(scroll.stickyHeader),
         };
     }
-    // ----
 
     exports.Grid = Grid;
 
