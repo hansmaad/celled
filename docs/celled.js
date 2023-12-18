@@ -513,7 +513,7 @@
     class Grid {
         constructor(container, options) {
             this.rows = [];
-            this.cells = [];
+            this.cells = []; // all cells in order from top to bottom and left to right. See flattenCells
             this.events = new EventEmitter();
             this.cleanups = [];
             this.container = typeof container === 'string' ? query(container) : container;
@@ -551,6 +551,13 @@
             options.cols.forEach((c, index) => head.appendChild(this.createHeadCell(c, index)));
             const renderOptions = { container, gridContainer, grid, head };
             this.render = options.scroll.virtualScroll ? new VirtualRenderer(renderOptions) : new DefaultRenderer(renderOptions);
+            // Listen to resize events on container element to reset column widths.
+            // Otherwise the column widths will be wrong and layout of edit cells is messed up.
+            const resizeObserver = new ResizeObserver(() => {
+                this.resetColumnWidths();
+            });
+            resizeObserver.observe(container);
+            this.cleanups.push(() => resizeObserver.disconnect());
             this.createRows();
             this.initMouse();
             this.initKeys();
@@ -941,25 +948,16 @@
             });
             const cleanupCopy = on(this.hiddenInput, 'copy', (e) => {
                 e.preventDefault();
-                const activeCell = this.activeCell;
-                if (!activeCell) {
-                    return;
-                }
                 const csv = [];
-                for (let ri = activeCell.row;; ri++) {
-                    const row = this.rows[ri];
-                    const csvRow = [];
-                    if (!row || !row.cells[activeCell.col] || !row.cells[activeCell.col].selected()) {
+                for (const row of this.rows) {
+                    const selectedCells = row.cells.filter(cell => cell.selected());
+                    if (selectedCells.length > 0) {
+                        csv.push(selectedCells.map(cell => cell.value()));
+                    }
+                    else if (csv.length) {
+                        // end of csv block reached
                         break;
                     }
-                    for (let ci = activeCell.col;; ++ci) {
-                        const cell = row.cells[ci];
-                        if (!cell || !cell.selected()) {
-                            break;
-                        }
-                        csvRow.push(cell.value());
-                    }
-                    csv.push(csvRow);
                 }
                 const clipboard = (e.clipboardData || window.clipboardData);
                 clipboard.setData('text/plain', writeCSV(csv, '\t'));
