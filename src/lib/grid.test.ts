@@ -1,5 +1,5 @@
 import { Grid, InputArgs, SelectArgs } from './grid';
-import { fireEvent } from '@testing-library/dom';
+import { createEvent, fireEvent } from '@testing-library/dom';
 import userEvent from '@testing-library/user-event';
 import { GridOptions } from './options';
 import { query } from './dom';
@@ -55,6 +55,12 @@ function getGrid() {
     };
 }
 
+
+global.ResizeObserver = jest.fn().mockImplementation(() => ({
+    observe: jest.fn(),
+    unobserve: jest.fn(),
+    disconnect: jest.fn(),
+}));
 
 describe('Grid', () => {
 
@@ -704,6 +710,76 @@ describe('Grid', () => {
         expect(fired[0].value).toBe('');
     });
 
+    describe('copyCSV', () => {
+
+        let cell00: Element;
+        let cell01: Element;
+        let cell10: Element;
+        let cell11: Element;
+        beforeEach(() => {
+            createGrid({
+                cols: ['a', 'b'],
+                rows: [ [1, 2], [3, 4] ],
+                canAddRows: true,
+            });
+            const g = getGrid();
+            cell00 = g.rows[0].cells[0].element;
+            cell01 = g.rows[0].cells[1].element;
+            cell10 = g.rows[1].cells[0].element;
+            cell11 = g.rows[1].cells[1].element;
+        });
+
+        it('should copy single cell', () => {
+            clickCell(0, 0);
+            const csv = copyToClipboard();
+            expect(csv).toEqual({ type: 'text/plain', data: '1' });
+        });
+
+        it('should copy cells selected by dragging from top left to bottom right', () => {
+            dragMouseOverCells([cell00, cell01, cell11]);
+            const csv = copyToClipboard();
+            expect(csv?.data).toEqual('1\t2\n3\t4');
+        });
+
+        it('should copy cell selected by dragging from bottom right to left top', () => {
+            dragMouseOverCells([cell11, cell10, cell00]);
+            const csv = copyToClipboard();
+            expect(csv?.data).toEqual('1\t2\n3\t4');
+        });
+
+        it('should copy cell selected by dragging from bottom left to top right', () => {
+            dragMouseOverCells([cell10, cell00, cell01]);
+            const csv = copyToClipboard();
+            expect(csv?.data).toEqual('1\t2\n3\t4');
+        });
+
+        it('should copy cell selected by dragging from top right to bottom left', () => {
+            dragMouseOverCells([cell01, cell11, cell10]);
+            const csv = copyToClipboard();
+            expect(csv?.data).toEqual('1\t2\n3\t4');
+        });
+
+        it('should copy single column to csv', () => {
+            clickColumnHead(1);
+            const csv = copyToClipboard();
+            expect(csv?.data).toEqual('2\n4');
+        });
+
+        it('should copy both columns to csv when dragged from left to right', () => {
+            const grid = getGrid();
+            dragMouseOverCells([grid.head.elements[0], grid.head.elements[1]]);
+            const csv = copyToClipboard();
+            expect(csv?.data).toEqual('1\t2\n3\t4');
+        });
+
+        it('should copy both columns to csv when dragged from right to left', () => {
+            const grid = getGrid();
+            dragMouseOverCells([grid.head.elements[1], grid.head.elements[0]]);
+            const csv = copyToClipboard();
+            expect(csv?.data).toEqual('1\t2\n3\t4');
+        });
+    });
+
     describe('pasteCSV', () => {
 
         let grid: Grid;
@@ -844,4 +920,29 @@ describe('Grid', () => {
         }
     }
 
+    function copyToClipboard() {
+        let copied: { type: string, data: string } | undefined;
+        const clipboardData = {
+            setData: (type: string, data: string) => {
+                copied = { type, data };
+            },
+            getData: jest.fn(),
+        } as unknown as DataTransfer;
+
+        if (document.activeElement) {
+            const copyEvent = createEvent.copy(document.activeElement, {
+                clipboardData,
+            });
+            fireEvent(document.activeElement, copyEvent);
+        }
+        return copied;
+    }
+
+    function dragMouseOverCells(cells: Element[]) {
+        fireEvent(cells[0], new MouseEvent('mousedown', { bubbles: true }));
+        for (const cell of cells) {
+            fireEvent(cell, new MouseEvent('mousemove', { bubbles: true }));
+        }
+        fireEvent(cells[cells.length - 1], new MouseEvent('mouseup', { bubbles: true }));
+    }
 });
