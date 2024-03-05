@@ -220,10 +220,11 @@
             else {
                 this.isActive = false;
                 if (this.input) {
+                    const val = this.val = this.input.value;
                     this.input.blur();
                     remove(this.input);
                     this.elem.innerHTML = '';
-                    this.elem.appendChild(valueElement(this.input.value));
+                    this.elem.appendChild(valueElement(val));
                     this.input = null;
                 }
             }
@@ -551,18 +552,18 @@
             options.cols.forEach((c, index) => head.appendChild(this.createHeadCell(c, index)));
             const renderOptions = { container, gridContainer, grid, head };
             this.render = options.scroll.virtualScroll ? new VirtualRenderer(renderOptions) : new DefaultRenderer(renderOptions);
-            // Listen to resize events on container element to reset column widths.
-            // Otherwise the column widths will be wrong and layout of edit cells is messed up.
-            const resizeObserver = new ResizeObserver(() => {
-                this.resetColumnWidths();
-            });
-            resizeObserver.observe(container);
-            this.cleanups.push(() => resizeObserver.disconnect());
             this.createRows();
             this.initMouse();
             this.initKeys();
             this.initClipboard();
             this.resetColumnWidths();
+            // Listen to resize events on container element to reset column widths.
+            // Otherwise the column widths will be wrong and layout of edit cells is messed up.
+            const resizeObserver = new ResizeObserver(() => {
+                this.updateColumnWidths();
+            });
+            resizeObserver.observe(container);
+            this.cleanups.push(() => resizeObserver.disconnect());
         }
         destroy() {
             if (this.render) {
@@ -606,18 +607,62 @@
             this.addRows([this.options.cols.map(c => '')]);
         }
         resetColumnWidths() {
-            const allCells = queryAll(this.container, `${css(CSS_HEAD)} ${css(CSS_CELL)}`);
-            allCells.forEach((c, i) => {
+            // Is called on initilization and on manual column resize events.
+            const headCells = this.getHeadCells();
+            if (!headCells.length) {
+                return;
+            }
+            // In order to get the initial layout correct, we first set widths to values
+            // from column options if given. The remaining space is then devided equally
+            // among the remaining columns.
+            const parent = headCells[0].parentElement;
+            const parentWidth = parent.offsetWidth;
+            let usedWidth = 0;
+            let usedCells = 0;
+            headCells.forEach((c, i) => {
                 const colOptions = this.options.cols[i];
                 if (!c.style.width && typeof colOptions === 'object' && colOptions.width) {
                     const widthOption = colOptions.width;
                     const width = typeof widthOption === 'string' ? widthOption : `${widthOption}px`;
                     c.style.width = width;
-                }
-                else {
-                    c.style.width = c.offsetWidth + 'px';
+                    usedWidth += c.offsetWidth;
+                    usedCells += 1;
                 }
             });
+            // Now we set widths to the remaining space.
+            const remainingWidth = parentWidth - usedWidth;
+            const remainingCells = headCells.length - usedCells;
+            if (remainingCells > 0) {
+                headCells.forEach((c, i) => {
+                    if (!c.style.width) {
+                        const initialWidth = remainingWidth / remainingCells;
+                        c.style.width = `${initialWidth}px`;
+                    }
+                });
+            }
+            // After the initial widths have been set, we store actual pixel values in the
+            // 'data-width' attribute that is needed when updating column widths after
+            // container resizes. See method updateColumnWidths().
+            headCells.forEach((c, i) => {
+                c.setAttribute('data-width', String(c.offsetWidth));
+            });
+        }
+        updateColumnWidths() {
+            // If we update the column widths after resizing the container, we want to retain the previous width ratios.
+            const headCells = this.getHeadCells();
+            const columnWidths = headCells.map(c => +c.getAttribute('data-width') || 0);
+            const previousTotalWidth = columnWidths.reduce((sum, width) => width + sum, 0);
+            const currentTotalWidth = headCells.reduce((sum, c) => c.offsetWidth + sum, 0);
+            const scale = currentTotalWidth / previousTotalWidth;
+            headCells.forEach((c, i) => {
+                c.style.width = `${columnWidths[i] * scale}px`;
+            });
+            headCells.forEach((c, i) => {
+                c.setAttribute('data-width', String(c.offsetWidth));
+            });
+        }
+        getHeadCells() {
+            return queryAll(this.container, `${css(CSS_HEAD)} ${css(CSS_CELL)}`);
         }
         createHeadCell(colOptions, columnIndex) {
             const text = typeof colOptions === 'object' ? colOptions.name : colOptions;
@@ -880,7 +925,7 @@
                 if (activeCell && !activeCell.readonly && activeCell.takesKey()) {
                     this.updateValue(activeCell, true);
                     this.cells.forEach(cell => {
-                        if (cell.selected() && cell !== activeCell) {
+                        if (cell.selected()) {
                             this.setCell(cell, activeCell.value());
                         }
                     });

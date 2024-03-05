@@ -40,7 +40,7 @@
     <script>
         function create() {
             const options = {
-                cols: ['P', 'A', 'B'],
+                cols: [{ name: 'P', width: '200px'}, 'A', 'B'],
                 rows: Array(10000).fill(0).map((x, i) => [
                     i,
                     Math.round((Math.random() * 1e6)).toString(),
