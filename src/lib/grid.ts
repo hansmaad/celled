@@ -497,7 +497,7 @@ export class Grid {
             if (activeCell && !activeCell.readonly && activeCell.takesKey()) {
                 this.updateValue(activeCell, true);
                 this.cells.forEach(cell => {
-                    if (cell.selected() && cell !== activeCell) {
+                    if (cell.selected()) {
                         this.setCell(cell, activeCell.value());
                     }
                 });

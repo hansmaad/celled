@@ -129,10 +129,11 @@ class InputCell implements Cell {
         else {
             this.isActive = false;
             if (this.input) {
+                const val = this.val = this.input.value;
                 this.input.blur();
                 remove(this.input);
                 this.elem.innerHTML = '';
-                this.elem.appendChild(valueElement(this.input.value));
+                this.elem.appendChild(valueElement(val));
                 this.input = null;
             }
         }

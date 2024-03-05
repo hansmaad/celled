@@ -220,10 +220,11 @@
             else {
                 this.isActive = false;
                 if (this.input) {
+                    const val = this.val = this.input.value;
                     this.input.blur();
                     remove(this.input);
                     this.elem.innerHTML = '';
-                    this.elem.appendChild(valueElement(this.input.value));
+                    this.elem.appendChild(valueElement(val));
                     this.input = null;
                 }
             }
@@ -924,7 +925,7 @@
                 if (activeCell && !activeCell.readonly && activeCell.takesKey()) {
                     this.updateValue(activeCell, true);
                     this.cells.forEach(cell => {
-                        if (cell.selected() && cell !== activeCell) {
+                        if (cell.selected()) {
                             this.setCell(cell, activeCell.value());
                         }
                     });

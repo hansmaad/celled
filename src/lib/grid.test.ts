@@ -716,8 +716,9 @@ describe('Grid', () => {
         let cell01: Element;
         let cell10: Element;
         let cell11: Element;
+        let grid: Grid;
         beforeEach(() => {
-            createGrid({
+            grid = createGrid({
                 cols: ['a', 'b'],
                 rows: [ [1, 2], [3, 4] ],
                 canAddRows: true,
@@ -766,17 +767,40 @@ describe('Grid', () => {
         });
 
         it('should copy both columns to csv when dragged from left to right', () => {
-            const grid = getGrid();
-            dragMouseOverCells([grid.head.elements[0], grid.head.elements[1]]);
+            const g = getGrid();
+            dragMouseOverCells([g.head.elements[0], g.head.elements[1]]);
             const csv = copyToClipboard();
             expect(csv?.data).toEqual('1\t2\n3\t4');
         });
 
         it('should copy both columns to csv when dragged from right to left', () => {
-            const grid = getGrid();
-            dragMouseOverCells([grid.head.elements[1], grid.head.elements[0]]);
+            const g = getGrid();
+            dragMouseOverCells([g.head.elements[1], g.head.elements[0]]);
             const csv = copyToClipboard();
             expect(csv?.data).toEqual('1\t2\n3\t4');
+        });
+
+        it('should copy edited values', () => {
+            editCell({ row: 0, col: 1, value: '42' });
+            dragMouseOverCells([cell00, cell01, cell11]);
+            const csv = copyToClipboard();
+            expect(csv?.data).toEqual('1\t42\n3\t4');
+        });
+
+        it('should copy after cells added', () => {
+            grid.addRows([[5, 6]]);
+            dragMouseOverCells([cell00, cell01, cell11]);
+            const csv = copyToClipboard();
+            expect(csv?.data).toEqual('1\t2\n3\t4');
+        });
+
+        it('should copy added cells', () => {
+            grid.addRows([[5, 6]]);
+            const g = getGrid();
+            const cell21 = g.rows[2].cells[1].element;
+            dragMouseOverCells([cell10, cell11, cell21]);
+            const csv = copyToClipboard();
+            expect(csv?.data).toEqual('3\t4\n5\t6');
         });
     });
 
@@ -891,6 +915,13 @@ describe('Grid', () => {
         fireEvent(cell, new MouseEvent('mousedown', { bubbles: true }));
         fireEvent(cell, new MouseEvent('mouseup', { bubbles: true }));
         return cell;
+    }
+
+    function editCell(args: { row: number, col: number, value: string }) {
+        clickCell(args.row, args.col);
+        keyPress('Enter', 13);
+        setValue(args.value);
+        keyDown('Enter', 13);
     }
 
     function clickColumnHead(col: number) {
