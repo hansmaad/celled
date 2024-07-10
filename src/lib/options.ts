@@ -23,10 +23,16 @@ export interface ScrollOptions {
 
 export type ColOptions = string | number | { name: string, width?: number|string };
 
+export interface GridInputProperties {
+    type: HTMLInputElement['type'];
+}
+
+export type GridInputOptions = HTMLInputElement | (() => HTMLInputElement) | GridInputProperties;
+
 export interface GridOptions {
     cols: readonly ColOptions[];
     rows: RowOptions[];
-    input?: HTMLInputElement | (() => HTMLInputElement);
+    input?: GridInputOptions;
     canAddRows?: boolean;
     scroll?: ScrollOptions;
 }

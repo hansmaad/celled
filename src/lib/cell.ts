@@ -24,6 +24,9 @@ export interface Cell {
 
     /**
      * Show a new value.
+     * This can be called on paste events, multi edit events and updates from external code.
+     * It will never be called on the active cell that caused the update. However, it
+     * can be called on the active cell when the update was triggered elsewhere.
      */
     set(value: CellValue | CellUpdateOptions): void;
 
@@ -161,9 +164,9 @@ class InputCell implements Cell {
     }
 
     private setValue(value: CellValue) {
-        this.val = String(value);
+        const strValue = this.val = String(value);
         if (this.input) {
-            this.input.value = value.toString();
+            this.input.value = strValue;
         }
         else if (this.elem) {
             this.elem.innerHTML = '';
@@ -304,20 +307,6 @@ class SelectCell implements Cell {
     takesMouse(): boolean {
         return true;
     }
-}
-
-// function setSelectCSS(element: HTMLElement, doSelect: boolean) {
-//     const classList = element.classList;
-//     if (doSelect) {
-//         classList.add(CSS_SELECTED);
-//     }
-//     else {
-//         classList.remove(CSS_SELECTED);
-//     }
-// }
-
-function isSelectCss(element: HTMLElement) {
-    return element.className.indexOf(CSS_SELECTED) >= 0;
 }
 
 function isPlainValue(value: CellValue | CellUpdateOptions): value is CellValue {

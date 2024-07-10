@@ -526,8 +526,9 @@ describe('Grid', () => {
         expect(options.rows).toEqual([ [1, 2], [3, 4] ]);
     });
 
-    it('should change cell if enter - input - enter', () => {
+    const shouldChangeCellIfEnterInputEnter = (additionalOptions: Partial<GridOptions>) => {
         const options = {
+            ...additionalOptions,
             cols: ['a', 'b'],
             rows: [ [1, 2], [3, 4] ],
         };
@@ -535,15 +536,20 @@ describe('Grid', () => {
 
         clickCell(0, 0);
         keyPress('Enter', 13);
-        setValue('e');
+        setValue('9');
         keyDown('Enter', 13);
-        expect(grid.rows[0].values()).toEqual(['e', '2']);
+        expect(grid.rows[0].values()).toEqual(['9', '2']);
         expect(grid.rows[1].values()).toEqual(['3', '4']);
-        expect(options.rows).toEqual([ ['e', 2], [3, 4] ]);
+        expect(options.rows).toEqual([ ['9', 2], [3, 4] ]);
+    };
+
+    it('should change cell if enter - input - enter', () => {
+        shouldChangeCellIfEnterInputEnter({});
     });
 
-    it('should move to next cell on enter', () => {
+    const shouldMoveToNextCellOnEnter = (additionalOptions: Partial<GridOptions>) => {
         const options = {
+            ...additionalOptions,
             cols: ['a', 'b'],
             rows: [ [1, 2], [3, 4] ],
         };
@@ -552,11 +558,15 @@ describe('Grid', () => {
 
         clickCell(0, 0);
         keyPress('Enter', 13);
-        setValue('e');
+        setValue('9');
         keyDown('Enter', 13);
-        expect(grid.rows[0].values()).toEqual(['e', '2']);
+        expect(grid.rows[0].values()).toEqual(['9', '2']);
         expect(grid.rows[1].values()).toEqual(['3', '4']);
         expectSelected([[1, 0]]);
+    };
+
+    fit('should move to next cell on enter', () => {
+        shouldMoveToNextCellOnEnter({});
     });
 
     it('should exit edit on enter in last cell if canAddRows is false', () => {
@@ -708,6 +718,65 @@ describe('Grid', () => {
         expect(fired[0].row).toBe(3);
         expect(fired[0].col).toBe(0);
         expect(fired[0].value).toBe('');
+    });
+
+    describe('with custom text input', () => {
+
+        let input: HTMLInputElement|null;
+
+        beforeEach(() => {
+            document.body.innerHTML = '<div id="test"></div><input type="text" id="my-input">';
+            input = document.getElementById('my-input') as HTMLInputElement|null;
+        });
+
+        const getInput = () => {
+            if (!input) {
+                throw new Error('');
+            }
+            return input;
+        };
+
+        it('should change cell if enter - input - enter', () => {
+            shouldChangeCellIfEnterInputEnter({ input: getInput });
+        });
+
+        it('should move to next cell on enter', () => {
+            shouldMoveToNextCellOnEnter({ input: getInput });
+        });
+    });
+
+    describe('with custom number input', () => {
+
+        let input: HTMLInputElement|null;
+
+        beforeEach(() => {
+            document.body.innerHTML = '<div id="test"></div><input type="number" id="my-input">';
+            input = document.getElementById('my-input') as HTMLInputElement|null;
+        });
+
+        const getInput = () => {
+            if (!input) {
+                throw new Error('');
+            }
+            return input;
+        };
+
+        it('should let enter numbers with dot', () => {
+            const options = {
+                cols: ['a', 'b'],
+                rows: [ [1, 2], [3, 4] ],
+                input: getInput,
+            };
+            const grid = create(options);
+            clickCell(0, 0);
+            keyPress('Enter', 13);
+            setValue('9.1');
+            keyDown('Enter', 13);
+            expect(grid.rows[0].values()).toEqual(['9.1', '2']);
+            expect(grid.rows[1].values()).toEqual(['3', '4']);
+            expect(options.rows).toEqual([ ['9.1', 2], [3, 4] ]);
+            expect(getInput().value).toBe('9.1');
+        });
     });
 
     describe('copyCSV', () => {
@@ -945,9 +1014,10 @@ describe('Grid', () => {
     }
 
     function setValue(value: string) {
-        if (document.activeElement?.tagName.toLowerCase() === 'input') {
-            fireEvent.input(document.activeElement, { target: { value } });
-            fireEvent.change(document.activeElement, { target: { value } });
+        const activeElement = document.activeElement;
+        if (activeElement?.tagName.toLowerCase() === 'input') {
+            fireEvent.input(activeElement, { target: { value } });
+            fireEvent.change(activeElement, { target: { value } });
         }
     }
 

@@ -1,7 +1,7 @@
 import { EventEmitter, EventHandler } from './events';
 import { parseCSV, writeCSV } from './csv';
 import { query, remove, createElement, queryAll, off, on } from './dom';
-import { CellUpdateOptions, CellValue, ColOptions, GridOptions, RowOptions, ScrollOptions } from './options';
+import { CellUpdateOptions, CellValue, ColOptions, GridInputOptions, GridOptions, RowOptions, ScrollOptions } from './options';
 import { Cell } from './cell';
 import { CSS_CELL, CSS_CONTAINER, CSS_CONTAINER_SCROLL, CSS_GRID, CSS_HEAD, CSS_HEAD_STICKY, CSS_RESIZER, CSS_ROW } from './css';
 import { Row } from './row';
@@ -19,7 +19,6 @@ export interface SelectArgs {
     grid: Grid;
     selection: Array<{ row: number, col: number }>;
 }
-
 
 export class Grid {
     private container: HTMLElement;
@@ -50,13 +49,9 @@ export class Grid {
         container.innerHTML = '';
         rows.length = 0;
 
-        if (options.input) {
-            this.cellInput = typeof options.input === 'function' ? options.input() : options.input;
-            remove(this.cellInput);
-        }
-        else {
-            this.cellInput = createElement<HTMLInputElement>(`<input id="celled-cell-input" type="text" >`);
-        }
+        this.cellInput = createCellInput(options.input);
+        remove(this.cellInput);
+
         this.hiddenInput = createElement(
             '<div id="celled-hidden-input" style="position:absolute; z-index:-1; left:2px; top: 2px;" contenteditable tabindex="0"></div>');
 
@@ -497,7 +492,9 @@ export class Grid {
             if (activeCell && !activeCell.readonly && activeCell.takesKey()) {
                 this.updateValue(activeCell, true);
                 this.cells.forEach(cell => {
-                    if (cell.selected()) {
+                    // setCell must not be called on the active cell, which is the one
+                    // that triggered this input.
+                    if (cell.selected() && cell !== activeCell) {
                         this.setCell(cell, activeCell.value());
                     }
                 });
@@ -652,6 +649,13 @@ export class Grid {
     }
 }
 
+function createCellInput(options?: GridInputOptions) {
+    if (typeof options === 'function') {
+        return options();
+    }
+    const type = options?.type || 'text';
+    return createElement<HTMLInputElement>(`<input id="celled-cell-input" type="${type}" >`);
+}
 
 function css(className: string) {
     return '.' + className;
