@@ -249,9 +249,9 @@
             }
         }
         setValue(value) {
-            this.val = String(value);
+            const strValue = this.val = String(value);
             if (this.input) {
-                this.input.value = value.toString();
+                this.input.value = strValue;
             }
             else if (this.elem) {
                 this.elem.innerHTML = '';
@@ -530,13 +530,8 @@
             const rows = this.rows;
             container.innerHTML = '';
             rows.length = 0;
-            if (options.input) {
-                this.cellInput = typeof options.input === 'function' ? options.input() : options.input;
-                remove(this.cellInput);
-            }
-            else {
-                this.cellInput = createElement(`<input id="celled-cell-input" type="text" >`);
-            }
+            this.cellInput = createCellInput(options.input);
+            remove(this.cellInput);
             this.hiddenInput = createElement('<div id="celled-hidden-input" style="position:absolute; z-index:-1; left:2px; top: 2px;" contenteditable tabindex="0"></div>');
             if (options.scroll) {
                 container.classList.add(CSS_CONTAINER_SCROLL);
@@ -925,7 +920,9 @@
                 if (activeCell && !activeCell.readonly && activeCell.takesKey()) {
                     this.updateValue(activeCell, true);
                     this.cells.forEach(cell => {
-                        if (cell.selected()) {
+                        // setCell must not be called on the active cell, which is the one
+                        // that triggered this input.
+                        if (cell.selected() && cell !== activeCell) {
                             this.setCell(cell, activeCell.value());
                         }
                     });
@@ -1064,6 +1061,13 @@
                 })),
             });
         }
+    }
+    function createCellInput(options) {
+        if (typeof options === 'function') {
+            return options();
+        }
+        const type = (options === null || options === void 0 ? void 0 : options.type) || 'text';
+        return createElement(`<input id="celled-cell-input" type="${type}" >`);
     }
     function css(className) {
         return '.' + className;
